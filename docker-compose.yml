@@ -1,0 +1,20 @@
+services:
+  ppe-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ppe-backend:latest
+    container_name: ppe-backend
+    restart: unless-stopped
+    ports:
+      - "8002:8002"
+    env_file:
+      - .env
+    environment:
+      # Container paths override the host paths in .env
+      BASE_DIR: /app
+      MEDIA_ROOT: /app/media
+    volumes:
+      - ./media:/app/media
+      # chat history, RAG index and SOP documents survive rebuilds
+      - ./data:/app/data

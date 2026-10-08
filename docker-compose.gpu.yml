@@ -1,0 +1,24 @@
+# GPU deployment (NVIDIA GPU required on host).
+#   docker compose -f docker-compose.gpu.yml up -d --build
+#   bash start.sh docker-gpu
+services:
+  ppe-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        GPU: "true"
+    image: ppe-backend:gpu
+    container_name: ppe-backend
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    gpus: all
+    env_file:
+      - .env
+    environment:
+      # Container paths override the host paths in .env
+      BASE_DIR: /app
+      MEDIA_ROOT: /app/media
+    volumes:
+      - ./media:/app/media

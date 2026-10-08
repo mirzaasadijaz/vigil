@@ -1,0 +1,266 @@
+@import "tailwindcss";
+@source "./src";
+
+/*
+  VIGIL design system — semantic, themeable tokens.
+  Default theme = Discord-led dark. Switch themes by setting
+  document.documentElement.dataset.theme = "light" | "cisco" | "nord" | "emerald" | "amethyst".
+  Every utility (bg-surface, text-muted, border-border/30, ...) resolves a --color-* var,
+  so overriding the vars per [data-theme] re-skins the whole app at runtime.
+*/
+
+@theme {
+  /* surfaces (default: Discord dark) */
+  --color-base: #1e1f22;        /* deepest / body */
+  --color-content: #313338;     /* main content area */
+  --color-surface: #2b2d31;     /* cards, sidebar */
+  --color-floating: #111214;    /* modals, popovers */
+  --color-elevated: #232428;    /* table headers, dividers */
+  --color-overlay: #404249;     /* selected row, strong hover */
+  --color-hover: #35373c;       /* nav/list hover */
+  --color-border: #3f4147;
+
+  /* accent */
+  --color-accent: #5865f2;
+  --color-accent-hover: #4752c4;
+  --color-accent-soft: #7289da;
+  --color-accent-text: #c9cdfb;
+  --color-link: #00a8fc;
+
+  /* status */
+  --color-online: #23a55a;
+  --color-online-text: #7dd6a3;
+  --color-online-dim: #1a3a2a;
+  --color-idle: #f0b232;
+  --color-idle-text: #f7d979;
+  --color-orange: #f0883e;
+  --color-dnd: #f23f43;
+  --color-dnd-text: #f5a3a5;
+  --color-dnd-dim: #4a1f1f;
+
+  /* text */
+  --color-th: #f2f3f5;          /* headings */
+  --color-tx: #dbdee1;          /* body */
+  --color-muted: #949ba4;
+  --color-faint: #80848e;
+
+  --font-mono: "gg mono", "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+
+:root {
+  font-family: "gg sans", "Helvetica Neue", Helvetica, "Inter", Arial, ui-sans-serif, system-ui, sans-serif;
+  color-scheme: dark;
+}
+
+/* ── Light ──────────────────────────────────────────────────────────────── */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-base: #e3e5e8;
+  --color-content: #f2f3f5;
+  --color-surface: #ffffff;
+  --color-floating: #ffffff;
+  --color-elevated: #f7f8fa;
+  --color-overlay: #e0e1e5;
+  --color-hover: #ebedf0;
+  --color-border: #d7d9dd;
+  --color-accent: #5865f2;
+  --color-accent-hover: #4752c4;
+  --color-accent-soft: #5865f2;
+  --color-accent-text: #404eed;
+  --color-link: #006ce7;
+  --color-online: #1a8245;
+  --color-online-text: #157a3f;
+  --color-online-dim: #d6f0e0;
+  --color-idle: #cc8500;
+  --color-idle-text: #a16207;
+  --color-orange: #c2410c;
+  --color-dnd: #d83c3e;
+  --color-dnd-text: #b4191b;
+  --color-dnd-dim: #fbe2e2;
+  --color-th: #060607;
+  --color-tx: #2e3338;
+  --color-muted: #4e5058;
+  --color-faint: #6d6f78;
+}
+
+/* ── Cisco Blue (dark) ──────────────────────────────────────────────────── */
+:root[data-theme="cisco"] {
+  --color-base: #0c131b;
+  --color-content: #11202c;
+  --color-surface: #18222e;
+  --color-floating: #0a1117;
+  --color-elevated: #131c26;
+  --color-overlay: #24323f;
+  --color-hover: #1d2b38;
+  --color-border: #2a3947;
+  --color-accent: #049fd9;
+  --color-accent-hover: #2b5592;
+  --color-accent-soft: #64bbe3;
+  --color-accent-text: #9fd6ef;
+  --color-link: #64bbe3;
+  --color-online: #6cc04a;
+  --color-online-text: #abc233;
+  --color-online-dim: #1f3318;
+  --color-idle: #ffcc00;
+  --color-idle-text: #ffcc00;
+  --color-orange: #ff7300;
+  --color-dnd: #cf2030;
+  --color-dnd-text: #f08c95;
+  --color-dnd-dim: #3a0f14;
+  --color-th: #ffffff;
+  --color-tx: #e8ebf1;
+  --color-muted: #9e9ea2;
+  --color-faint: #6b7280;
+}
+
+/* ── Midnight / Nord ────────────────────────────────────────────────────── */
+:root[data-theme="nord"] {
+  --color-base: #2e3440;
+  --color-content: #3b4252;
+  --color-surface: #353b48;
+  --color-floating: #292e38;
+  --color-elevated: #2e3440;
+  --color-overlay: #4c566a;
+  --color-hover: #424a5a;
+  --color-border: #4c566a;
+  --color-accent: #88c0d0;
+  --color-accent-hover: #81a1c1;
+  --color-accent-soft: #8fbcbb;
+  --color-accent-text: #d8dee9;
+  --color-link: #88c0d0;
+  --color-online: #a3be8c;
+  --color-online-text: #b5ca9c;
+  --color-online-dim: #313a2c;
+  --color-idle: #ebcb8b;
+  --color-idle-text: #ebcb8b;
+  --color-orange: #d08770;
+  --color-dnd: #bf616a;
+  --color-dnd-text: #d99aaa;
+  --color-dnd-dim: #3d2528;
+  --color-th: #eceff4;
+  --color-tx: #e5e9f0;
+  --color-muted: #9aa3b2;
+  --color-faint: #7b8494;
+}
+
+/* ── Emerald / Forest (dark) ────────────────────────────────────────────── */
+:root[data-theme="emerald"] {
+  --color-base: #0f1714;
+  --color-content: #16211c;
+  --color-surface: #122019;
+  --color-floating: #0a110d;
+  --color-elevated: #0e1714;
+  --color-overlay: #24332b;
+  --color-hover: #1b2a22;
+  --color-border: #24332b;
+  --color-accent: #2bd576;
+  --color-accent-hover: #1fa556;
+  --color-accent-soft: #5ee49a;
+  --color-accent-text: #a7f3cf;
+  --color-link: #34d399;
+  --color-online: #2bd576;
+  --color-online-text: #86efac;
+  --color-online-dim: #14331f;
+  --color-idle: #f0b232;
+  --color-idle-text: #f7d979;
+  --color-orange: #f0883e;
+  --color-dnd: #f25555;
+  --color-dnd-text: #f5a3a5;
+  --color-dnd-dim: #3a1717;
+  --color-th: #ecfdf3;
+  --color-tx: #d3e6dc;
+  --color-muted: #8aa399;
+  --color-faint: #6b8579;
+}
+
+/* ── Amethyst (dark) ────────────────────────────────────────────────────── */
+:root[data-theme="amethyst"] {
+  --color-base: #17141f;
+  --color-content: #211c2e;
+  --color-surface: #1c1827;
+  --color-floating: #100d16;
+  --color-elevated: #17131f;
+  --color-overlay: #322a47;
+  --color-hover: #261f36;
+  --color-border: #322a47;
+  --color-accent: #a855f7;
+  --color-accent-hover: #9333ea;
+  --color-accent-soft: #c084fc;
+  --color-accent-text: #e9d5ff;
+  --color-link: #c084fc;
+  --color-online: #23a55a;
+  --color-online-text: #7dd6a3;
+  --color-online-dim: #14331f;
+  --color-idle: #f0b232;
+  --color-idle-text: #f7d979;
+  --color-orange: #f0883e;
+  --color-dnd: #f23f43;
+  --color-dnd-text: #f5a3a5;
+  --color-dnd-dim: #3a1717;
+  --color-th: #f4f2f8;
+  --color-tx: #ddd6e8;
+  --color-muted: #a097b5;
+  --color-faint: #807693;
+}
+
+body {
+  background-color: var(--color-base);
+  color: var(--color-tx);
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-mono, code, .mono { font-family: var(--font-mono); }
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  /* status dot notch ring punched into the surface behind it */
+  .dot-notch { box-shadow: 0 0 0 3px var(--color-surface); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* toast: slide up from below, settle */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(24px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes toastOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(-8px) scale(0.98); }
+}
+.toast-in  { animation: toastIn 0.32s cubic-bezier(0.21,0.61,0.35,1) both; }
+.toast-out { animation: toastOut 0.4s ease forwards; }
+
+/* live attendance feed: a new card drops in from the top; older cards fade out
+   toward the bottom of the scroll column via a mask. */
+@keyframes attCardIn {
+  from { opacity: 0; transform: translateY(-14px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.att-card-in  { animation: attCardIn 0.3s cubic-bezier(0.21,0.61,0.35,1) both; }
+.att-fade-mask {
+  -webkit-mask-image: linear-gradient(to bottom, #000 78%, transparent 100%);
+          mask-image: linear-gradient(to bottom, #000 78%, transparent 100%);
+}
+@media (prefers-reduced-motion: reduce) {
+  .att-card-in { animation: none; }
+}
+
+@keyframes pulseRing {
+  0%   { box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-dnd) 50%, transparent); }
+  70%  { box-shadow: 0 0 0 6px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.animate-pulse-ring { animation: pulseRing 1.4s ease-in-out infinite; }
+
+/* smooth theme transitions on color-bearing properties */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
+}
+

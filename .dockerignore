@@ -1,0 +1,12 @@
+# Build context exclusions
+.git
+media
+obf_dist
+node_modules
+frontend/node_modules
+frontend/src
+__pycache__
+*.pyc
+.env
+*.log
+models_backup

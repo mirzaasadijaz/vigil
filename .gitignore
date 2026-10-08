@@ -1,0 +1,49 @@
+# AI/Claude
+CLAUDE.md
+GEMINI.md
+
+# Media/Logs
+media/
+
+# Database
+db.sqlite3
+
+# Models
+models
+*.pt
+*.onnx
+# ...but ship the body Re-ID weights: small (~0.9MB) and, unlike yolo11n.pt/buffalo_l,
+# they don't auto-download, so committing them lets other deployments just work.
+!reid.onnx
+
+# Backups/Dumps
+employees_backup.json
+employees_dump.json
+ppe_db.sql
+
+# Environment
+env/
+**/__pycache__/
+*.pyc
+
+# Local Config
+.env
+
+# PyInstaller build artifacts (root-level)
+/build/
+/dist/
+file.jpeg
+
+# False-detection and module diagnostics. Captures are operational data — they
+# name cameras and tracked people, and they roll to tens of MB. Never commit them.
+# Head-count diagnostic logs (Phase 1)
+# The DIRECTORY is tracked (via its own .gitignore) so it exists on a fresh clone;
+# every file inside it is still ignored, which is the rule the comment above sets.
+logs/*
+!logs/.gitignore
+
+# add to project .gitignore
+data/rag/index/
+data/rag/cache/
+data/agent/conversations/
+

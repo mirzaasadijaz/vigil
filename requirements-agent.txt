@@ -1,0 +1,20 @@
+# VIGIL - chatbot / agent / RAG dependencies  (Python 3.10+; project uses 3.11)
+
+# ── Agent (LangChain 1.x create_agent, runs on LangGraph) + Gemini ───────────
+langchain>=1.0.0,<2
+langgraph>=1.0.0,<2
+langchain-google-genai>=3.0.0,<5      # pulls in google-genai and langchain-core
+google-genai
+
+# ── RAG ──────────────────────────────────────────────────────────────────────
+chromadb>=1.0.0,<2                    # local vector store + built-in ONNX MiniLM embeddings
+pypdf>=5.0.0                          # read .pdf documents
+python-docx>=1.1.0                    # read .docx documents
+
+# ── Dev / tests ──────────────────────────────────────────────────────────────
+# pip install pytest      ->      pytest tests -
+# pip install aiosqlite
+
+
+python-dotenv
+sentence-transformers

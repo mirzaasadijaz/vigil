@@ -1,0 +1,51 @@
+VIGIL SECURITY INTELLIGENCE
+──────────────────────────────────────
+
+OBJECTS
+✓ Person
+✓ Vehicle
+
+SPATIAL
+✓ Restricted zones
+✓ Virtual tripwires
+✓ Direction
+✓ Zone transitions
+
+TEMPORAL
+✓ Dwell time
+✓ Loitering
+✓ After-hours presence
+✓ Persistence
+✓ Repeated movement
+
+GROUP
+✓ Crowd detection
+✓ Unusual gathering
+✓ Density escalation
+
+MOVEMENT
+✓ Wrong direction
+✓ Rapid movement
+✓ Abnormal movement patterns
+
+SECURITY
+✓ Abandoned object
+✓ Camera tampering
+✓ Vehicle intrusion
+✓ Composite security events
+
+ALERTING
+✓ Severity
+✓ Cooldowns
+✓ Deduplication
+✓ Snapshots
+✓ Clips
+✓ Audit trail
+✓ False-positive metrics
+
+NOT IN THIS USE CASE
+✗ Theft detection
+✗ Product concealment
+✗ Product/person interaction
+✗ Customer intent
+✗ Criminal-intent prediction

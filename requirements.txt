@@ -1,0 +1,46 @@
+# VIGIL / PPE_NEW — Python dependencies (Python 3.11)
+#
+# Install order matters a little. See SETUP.md for the full walkthrough.
+#
+#   1. Install PyTorch + onnxruntime FIRST, matched to your hardware (see below).
+#   2. Then:  pip install -r requirements.txt
+#
+# torch / torchvision / onnxruntime are deliberately NOT listed here because the
+# correct wheel depends on your CUDA version. This is a GPU deployment:
+#
+#   GPU (CUDA 12.1) — DEFAULT, what this project is built/deployed on:
+#     pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu121
+#     pip install onnxruntime-gpu==1.26.0
+#
+#   CPU-only fallback (machines without an NVIDIA GPU only):
+#     pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cpu
+#     pip install onnxruntime==1.26.0
+#
+# ── Web / API ───────────────────────────────────────────────────────────────
+fastapi==0.137.2
+uvicorn[standard]==0.49.0
+sqlalchemy[asyncio]==2.0.51
+asyncpg==0.31.0
+psycopg2-binary==2.9.12
+alembic==1.18.4
+pydantic==2.13.4
+pydantic-settings==2.14.2
+python-multipart==0.0.32
+python-jose[cryptography]==3.5.0
+bcrypt==5.0.0
+
+# ── AI / computer vision ────────────────────────────────────────────────────
+ultralytics==8.4.48          # YOLOv11n person detection + ByteTrack
+insightface==0.7.3           # SCRFD face detection + ArcFace recognition (buffalo_l)
+opencv-python==4.13.0.92
+numpy==2.4.4
+pillow==12.1.1
+scikit-image==0.26.0
+Cython==3.2.5                # build dependency for insightface
+ping3==5.1.5                 # camera reachability checks
+
+# ── Platform ────────────────────────────────────────────────────────────────
+# Six backend modules do ZoneInfo("Asia/Karachi") AT IMPORT TIME. Linux reads the
+# system tz database, but Windows ships none, so without this the app cannot even
+# import there (ZoneInfoNotFoundError). Needed for build_exe.bat and Windows dev.
+tzdata==2026.3; sys_platform == "win32"

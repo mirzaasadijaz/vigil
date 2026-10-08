@@ -1,0 +1,4 @@
+# Runtime logs are never committed; the DIRECTORY is, so it exists on a fresh clone
+# and nothing has to create it before it can write. Keeps this file and nothing else.
+*
+!.gitignore
