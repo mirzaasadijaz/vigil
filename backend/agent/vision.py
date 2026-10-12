@@ -14,12 +14,14 @@ import io
 import json
 import re
 from collections import OrderedDict
+from functools import lru_cache
 from pathlib import Path
 
+from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
 from PIL import Image
 
+from backend.agent.llm import make_gemini
 from backend.core.config import settings
 
 # Long edge (px) sent to the model. CCTV objects are small, so the screen is not tiny.
@@ -28,7 +30,6 @@ _EDGE = {"light": 960, "strong": 1568}
 # visible answer comes back truncated / empty.
 _TOKENS = {"light": 512, "strong": 1024}
 
-_models: dict[str, ChatGoogleGenerativeAI] = {}
 _sem: asyncio.Semaphore | None = None
 _CACHE: "OrderedDict[tuple, str]" = OrderedDict()   # (snapshot, model, prompt) -> answer
 _CACHE_MAX = 2000
@@ -92,38 +93,20 @@ def _encode(path: Path, edge: int) -> str:
 
 # ── models ───────────────────────────────────────────────────────────────────
 def model_name(tier: str) -> str:
-    key = "GEMINI_SCAN_MODEL" if tier == "light" else "GEMINI_VISION_MODEL"
-    return getattr(settings, key, "") or getattr(settings, "GEMINI_MODEL", "") or "gemini-3.8-flash"
+    override = settings.GEMINI_SCAN_MODEL if tier == "light" else settings.GEMINI_VISION_MODEL
+    return override or settings.GEMINI_MODEL
 
 
-def _get_model(tier: str) -> ChatGoogleGenerativeAI:
-    if tier not in _models:
-        kwargs = dict(model=model_name(tier),
-                      google_api_key=getattr(settings, "GEMINI_API_KEY", "") or None,
-                      max_output_tokens=_TOKENS[tier], max_retries=1, timeout=45)
-        try:
-            _models[tier] = ChatGoogleGenerativeAI(thinking_level="low", **kwargs)
-        except (ValueError, TypeError):        # older langchain-google-genai: no thinking_level
-            _models[tier] = ChatGoogleGenerativeAI(**kwargs)
-    return _models[tier]
+@lru_cache(maxsize=None)
+def _get_model(tier: str) -> BaseChatModel:
+    return make_gemini(model_name(tier), max_tokens=_TOKENS[tier], timeout=45)
 
 
 def _semaphore() -> asyncio.Semaphore:
     global _sem
     if _sem is None:                           # one shared cap on parallel Gemini calls
-        _sem = asyncio.Semaphore(max(1, int(getattr(settings, "VISION_CONCURRENCY", 4))))
+        _sem = asyncio.Semaphore(max(1, settings.VISION_CONCURRENCY))
     return _sem
-
-
-def _text(msg) -> str:
-    c = msg.content
-    if isinstance(c, str):
-        return c
-    if isinstance(c, list):
-        return "".join(b if isinstance(b, str) else (b.get("text") or "")
-                       for b in c
-                       if isinstance(b, str) or (isinstance(b, dict) and b.get("type", "text") == "text"))
-    return str(c or "")
 
 
 # ── public API ───────────────────────────────────────────────────────────────
@@ -154,7 +137,7 @@ async def ask(tier: str, snapshot: str, prompt: str) -> str:
             out = await _get_model(tier).ainvoke([msg])
         except Exception as e:
             raise VisionError(f"vision model call failed ({type(e).__name__})") from e
-    text = _text(out).strip()
+    text = out.text.strip()
     if not text:
         raise VisionError("vision model returned nothing")
 

@@ -1,22 +1,26 @@
 """Adapter: our provider-neutral tools (tools/registry.py) -> LangChain StructuredTools.
 
-The tools themselves are untouched, so the same SQL / RAG code is used by LangChain, by the
-Google SDK version, or by any future framework. Each tool returns (text for the model, sources
-list). The sources travel as the ToolMessage *artifact*, which is never shown to the model.
+The tools themselves are untouched, so the same SQL / RAG code can serve any framework. Each tool
+returns (JSON text for the model, sources list); the sources travel as the ToolMessage *artifact*,
+which is never shown to the model.
+
+TOOLS is built once at import. Each tool resolves its handler through registry.run_tool() at CALL
+time, so tests can still monkeypatch registry.HANDLERS after import.
 """
 from __future__ import annotations
 
 import json
+from typing import Any
 
 from langchain_core.tools import StructuredTool
 
 from backend.agent.tools import registry
 
 
-def _make(schema: dict) -> StructuredTool:
+def _make(schema: dict[str, Any]) -> StructuredTool:
     name = schema["name"]
 
-    async def _call(**kwargs):
+    async def _call(**kwargs: Any) -> tuple[str, list[str]]:
         out = await registry.run_tool(name, kwargs)
         sources = out.get("sources", []) if isinstance(out, dict) else []
         return json.dumps(out, default=str), sources
@@ -30,6 +34,4 @@ def _make(schema: dict) -> StructuredTool:
     )
 
 
-def build_tools() -> list[StructuredTool]:
-    # Looked up at call time (not import time) so tests can monkeypatch registry.HANDLERS.
-    return [_make(s) for s in registry.TOOLS]
+TOOLS: list[StructuredTool] = [_make(s) for s in registry.TOOLS]

@@ -228,7 +228,7 @@ async def scan_alerts_for(a: dict) -> dict:
         if err:
             return {"error": err}
 
-    cap = max(1, min(int(a.get("max_scan") or getattr(settings, "VISION_MAX_SCAN", 60)), HARD_MAX_SCAN))
+    cap = max(1, min(int(a.get("max_scan") or getattr(settings, "VISION_MAX_SCAN", 15)), HARD_MAX_SCAN))
     newest = a.get("order") != "oldest_first"
     first_only = bool(a.get("stop_at_first_hit"))
     rows, total = await _candidates(cam_id, a.get("module"), a.get("date_from"),
@@ -239,7 +239,7 @@ async def scan_alerts_for(a: dict) -> dict:
 
     # Chunks of VISION_CONCURRENCY run in parallel, in order, so "first hit" stays correct
     # and we can stop early without having paid for the rest.
-    width = max(1, int(getattr(settings, "VISION_CONCURRENCY", 4)))
+    width = max(1, int(getattr(settings, "VISION_CONCURRENCY", 5)))
     budget = float(getattr(settings, "VISION_SCAN_BUDGET_S", 60))
     stats: Counter = Counter()
     hits: list[dict] = []

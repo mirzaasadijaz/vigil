@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
 
+from backend.agent.vision import media_link
 from backend.core.database import AsyncSessionLocal
 from backend.models.alert import AlertLog
 
@@ -26,7 +27,8 @@ _FILTER_PROPS = {
 
 SCHEMAS = [
     {"name": "search_alerts",
-     "description": "List individual alerts, newest first. Use for 'show me', 'latest', 'what happened'.",
+     "description": "List individual alerts, newest first. Use for 'show me', 'latest', 'what happened'. "
+                    "Each alert carries its own snapshot link (null when it has none).",
      "input_schema": {"type": "object", "properties": {
          **_FILTER_PROPS,
          "limit": {"type": "integer", "description": f"max {MAX_ROWS}, default 10"}}}},
@@ -71,6 +73,7 @@ async def search_alerts(a: dict) -> dict:
                       else ("unknown" if r.unknown_person else None),
             "likely_candidate": r.likely_candidate,
             "feedback": r.feedback, "feedback_note": r.feedback_note,
+            "snapshot": media_link(r.snapshot) if r.snapshot else None,
         })
     return {"count": len(out), "alerts": out}
 

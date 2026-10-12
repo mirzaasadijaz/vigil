@@ -17,7 +17,7 @@ class Settings(BaseSettings):
 
         # Chatbot / Agent
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-3.5-flash"
+    GEMINI_MODEL: str = "gemini-3.8-flash"
 
     # Vision (reads alert snapshots). Blank model = use GEMINI_MODEL.
     GEMINI_SCAN_MODEL: str = ""      # light model that screens MANY snapshots (set a lite/flash-lite one)
@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     RAG_EMBED_MODEL: str = "default"
     RAG_TOP_K: int = 4
     RAG_MIN_SCORE: float = 0.2
+    RAG_IMAGE_MIN_SCORE: float = 0.0   # CLIP text->image similarity floor; calibrate on your own snapshots
 
 
     model_config = SettingsConfigDict(

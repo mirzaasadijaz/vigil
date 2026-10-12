@@ -10,7 +10,7 @@ from backend.agent.tools import registry
 def test_registry_is_consistent():
     names = [t["name"] for t in registry.TOOLS]
     assert set(names) == {"search_alerts", "count_alerts", "list_cameras", "search_knowledge",
-                           "search_snapshots"}
+                           "search_snapshots", "inspect_alert_image", "scan_alerts_for"}
     for t in registry.TOOLS:
         assert t["input_schema"]["type"] == "object" and t["description"]
 
@@ -48,8 +48,8 @@ def test_session_store_keeps_sources(tmp_path, monkeypatch):
     asyncio.run(go())
 
 
-# --- agent loop (needs langchain; skipped where only requirements.txt is installed) ----------
-pytest.importorskip("langchain")
+# --- agent loop (needs langgraph; skipped where only requirements.txt is installed) ----------
+pytest.importorskip("langgraph")
 from langchain_core.language_models.chat_models import BaseChatModel          # noqa: E402
 from langchain_core.messages import AIMessage                                 # noqa: E402
 from langchain_core.outputs import ChatGeneration, ChatResult                 # noqa: E402
@@ -80,7 +80,8 @@ def _call(name, args, id_="t1"):
 def _run(monkeypatch, script, handlers=None, message="intrusion par kya karein?"):
     for k, fn in (handlers or {}).items():
         monkeypatch.setitem(registry.HANDLERS, k, fn)
-    monkeypatch.setattr(agent_mod, "_get_model", lambda: ScriptedModel(script=script))
+    model = ScriptedModel(script=script)       # ONE instance: _get_model() is asked on every model step
+    monkeypatch.setattr(agent_mod, "_get_model", lambda: model)
     return asyncio.run(agent_mod.run_agent([], message))
 
 

@@ -1,107 +1,134 @@
-"""Agent: LangChain `create_agent` (runs on LangGraph) + Gemini + our tools.
+"""Chat agent: an explicit two-node LangGraph over a one-field state.
 
-Flow handled by the graph:  model -> (tool calls?) -> tools -> model -> ... -> final answer.
-We bound it with recursion_limit so a confused model cannot loop forever.
+    START -> model --(tool calls?)--> tools
+               ^  |                     |
+               |  +--(none)--> END      |
+               +------------------------+
+
+State is `MessagesState` and nothing else: the conversation, merged by the `add_messages`
+reducer. Everything else a turn produces rides on a message instead of becoming graph state:
+
+    sources     -> ToolMessage.artifact   (carried for the UI, never shown to the model)
+    tool names  -> ToolMessage.name
+    the answer  -> the last AIMessage
+
+The graph is compiled once at import. Today's date goes into the system prompt inside the model
+node, at call time, so nothing has to be rebuilt per request and the prompt is never stored in state.
 """
 from __future__ import annotations
 
 import time
+from collections.abc import Mapping, Sequence
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
+from typing import Any, TypedDict
 from zoneinfo import ZoneInfo
 
-from langchain.agents import create_agent
-from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langgraph.errors import GraphRecursionError
-
-from backend.agent.lc_tools import build_tools
-from backend.core.config import settings
 from dotenv import load_dotenv
+from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import AIMessage, AnyMessage, HumanMessage, SystemMessage, ToolMessage
+from langgraph.errors import GraphRecursionError
+from langgraph.graph import START, MessagesState, StateGraph
+from langgraph.graph.state import CompiledStateGraph
+from langgraph.prebuilt import ToolNode, tools_condition
 
+from backend.agent.lc_tools import TOOLS
+from backend.agent.llm import make_gemini
+from backend.core.config import settings
+
+# Settings ignores keys it does not declare, so this is what exports LANGCHAIN_* / LangSmith
+# variables from .env into os.environ. Removing it silently turns tracing off.
 load_dotenv()
 
 TZ = ZoneInfo("Asia/Karachi")
 MAX_TOOL_ROUNDS = 6
+# One round = model step + tools step; +1 for the final model call that writes the answer.
+RECURSION_LIMIT = 2 * MAX_TOOL_ROUNDS + 1
 _PROMPT = (Path(__file__).parent / "prompts" / "system.md").read_text(encoding="utf-8")
-_model = None
 
 
-def _get_model():
-    global _model
-    if _model is None:
-        kwargs = dict(
-            model=getattr(settings, "GEMINI_MODEL", "") or "gemini-3.5-flash",
-            google_api_key=getattr(settings, "GEMINI_API_KEY", "") or None,
-            max_output_tokens=4096,      # thinking models spend part of this on thinking
-            max_retries=1,               # each retry can cost a full timeout
-            timeout=90,
-        )
-        try:
-            # Gemini 3.x defaults to medium thinking; "low" is plenty for picking tools and
-            # summarising results, and is much faster.
-            _model = ChatGoogleGenerativeAI(thinking_level="low", **kwargs)
-        except (ValueError, TypeError) as e:
-            # Older langchain-google-genai does not know thinking_level: run without it.
-            print(f"[AGENT] thinking_level not supported ({e!r:.120}); "
-                  f"run: pip install -U langchain-google-genai", flush=True)
-            _model = ChatGoogleGenerativeAI(**kwargs)
-    return _model
+class AgentReply(TypedDict):
+    reply: str
+    sources: list[str]
+    tools_used: list[str]
 
 
-def _build_agent():
-    # Built per request: the system prompt contains today's date, and compiling is cheap.
-    system = _PROMPT.replace("{today}", datetime.now(TZ).strftime("%A %Y-%m-%d"))
-    return create_agent(model=_get_model(), tools=build_tools(), system_prompt=system)
+@lru_cache(maxsize=1)
+def _get_model() -> BaseChatModel:
+    return make_gemini(settings.GEMINI_MODEL, max_tokens=4096, timeout=300)
 
 
-def _text(msg) -> str:
-    """Plain text of an AIMessage. Gemini 2.5 (thinking) can return `content` as a list of
-    blocks ({"type": "text"|"thinking", ...}) instead of a str - keep only the text blocks."""
-    c = msg.content
-    if isinstance(c, str):
-        return c
-    if isinstance(c, list):
-        return "".join(
-            b if isinstance(b, str) else (b.get("text") or "")
-            for b in c
-            if isinstance(b, str) or (isinstance(b, dict) and b.get("type", "text") == "text"))
-    return str(c or "")
+def _system_message() -> SystemMessage:
+    today = datetime.now(TZ).strftime("%A %Y-%m-%d")
+    return SystemMessage(_PROMPT.replace("{today}", today))
 
 
-async def run_agent(history: list[dict], message: str) -> dict:
-    """history: [{"role","content"}] plain-text turns. Returns {"reply", "sources", "tools_used"}."""
-    inputs = [(HumanMessage if h["role"] == "user" else AIMessage)(content=h["content"])
-              for h in history]
+# ── graph ────────────────────────────────────────────────────────────────────
+async def call_model(state: MessagesState) -> dict[str, list[AnyMessage]]:
+    # _get_model() is resolved here, at call time, so tests can swap the model after import.
+    model = _get_model().bind_tools(TOOLS)
+    
+    # Limit history to prevent massive payloads that cause 504 Timeouts
+    messages = state["messages"]
+    if len(messages) > 15:
+        messages = messages[-15:]
+        
+        # Prevent API errors by removing orphaned tool outputs at the slice boundary
+        while messages and isinstance(messages[0], ToolMessage):
+            messages.pop(0)
+
+    # Force LangGraph to respect the 120-second timeout configuration
+    return {
+        "messages": [
+            await model.ainvoke(
+                [_system_message()] + messages,
+                config={"timeout": 120.0}
+            )
+        ]
+    }
+
+def _build_graph() -> CompiledStateGraph[MessagesState, None, MessagesState, MessagesState]:
+    g = StateGraph(MessagesState)
+    g.add_node("model", call_model)
+    g.add_node("tools", ToolNode(TOOLS))          # runs every tool call of the last AIMessage
+    g.add_edge(START, "model")
+    g.add_conditional_edges("model", tools_condition)     # tool calls -> "tools", else END
+    g.add_edge("tools", "model")
+    return g.compile()
+
+
+GRAPH = _build_graph()
+
+
+# ── entry point ──────────────────────────────────────────────────────────────
+def _reply(text: str, sources: Sequence[str] = (), tools: Sequence[str] = ()) -> AgentReply:
+    return {"reply": text, "sources": list(dict.fromkeys(sources)), "tools_used": list(tools)}
+
+
+async def run_agent(history: Sequence[Mapping[str, Any]], message: str) -> AgentReply:
+    """history: plain-text turns [{"role": "user"|"assistant", "content": str}]."""
+    inputs: list[AnyMessage] = [
+        (HumanMessage if t["role"] == "user" else AIMessage)(content=t["content"]) for t in history]
     inputs.append(HumanMessage(content=message))
-
-    def fallback(reply: str, sources=(), tools=()) -> dict:
-        return {"reply": reply, "sources": list(dict.fromkeys(sources)), "tools_used": list(tools)}
 
     t0 = time.perf_counter()
     try:
-        result = await _build_agent().ainvoke(
-            {"messages": inputs},
-            config={"recursion_limit": MAX_TOOL_ROUNDS * 2 + 1})
+        state = await GRAPH.ainvoke({"messages": inputs}, {"recursion_limit": RECURSION_LIMIT})
     except GraphRecursionError:
-        return fallback("The question was too complex - please ask again more specifically.")
+        return _reply("The question was too complex - please ask again more specifically.")
     except Exception as e:
         # Timing matters here: a failure after ~90 s means the model/network was too slow.
         print(f"[AGENT] failed after {time.perf_counter() - t0:.1f}s: {type(e).__name__}", flush=True)
         raise
 
-    new = result["messages"][len(inputs):]               # only what happened in THIS turn
-    sources, tools = [], []
-    for m in new:
-        if isinstance(m, ToolMessage):
-            tools.append(m.name)
-            if isinstance(m.artifact, list):
-                sources += [str(s) for s in m.artifact]
+    turn = state["messages"][len(inputs):]                # only what THIS turn added
+    tool_msgs = [m for m in turn if isinstance(m, ToolMessage)]
+    sources = [str(s) for m in tool_msgs if isinstance(m.artifact, list) for s in m.artifact]
+    tools = [m.name for m in tool_msgs if m.name]
+    print(f"[AGENT] done in {time.perf_counter() - t0:.1f}s | "
+          f"model calls={sum(isinstance(m, AIMessage) for m in turn)} | tools={tools}", flush=True)
 
-    model_calls = sum(isinstance(m, AIMessage) for m in new)
-    print(f"[AGENT] done in {time.perf_counter() - t0:.1f}s | model calls={model_calls} "
-          f"| tools={tools}", flush=True)
-
-    last = next((m for m in reversed(new) if isinstance(m, AIMessage)), None)
-    text = (_text(last) if last is not None else "").strip()
-    return fallback(text or "(Empty response received, please try again.)", sources, tools)
+    final = next((m for m in reversed(turn) if isinstance(m, AIMessage)), None)
+    text = final.text.strip() if final is not None else ""
+    return _reply(text or "(Empty response received, please try again.)", sources, tools)
