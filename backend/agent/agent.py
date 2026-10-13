@@ -71,8 +71,8 @@ async def call_model(state: MessagesState) -> dict[str, list[AnyMessage]]:
     
     # Limit history to prevent massive payloads that cause 504 Timeouts
     messages = state["messages"]
-    if len(messages) > 15:
-        messages = messages[-15:]
+    if len(messages) > 4:
+        messages = messages[-4:]
         
         # Prevent API errors by removing orphaned tool outputs at the slice boundary
         while messages and isinstance(messages[0], ToolMessage):
