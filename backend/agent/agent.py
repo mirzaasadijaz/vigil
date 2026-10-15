@@ -66,19 +66,17 @@ def _system_message() -> SystemMessage:
 
 # ── graph ────────────────────────────────────────────────────────────────────
 async def call_model(state: MessagesState) -> dict[str, list[AnyMessage]]:
-    # _get_model() is resolved here, at call time, so tests can swap the model after import.
     model = _get_model().bind_tools(TOOLS)
     
-    # Limit history to prevent massive payloads that cause 504 Timeouts
     messages = state["messages"]
     if len(messages) > 4:
         messages = messages[-4:]
         
-        # Prevent API errors by removing orphaned tool outputs at the slice boundary
-        while messages and isinstance(messages[0], ToolMessage):
+        # Prevent API errors by ensuring the slice always starts with a HumanMessage.
+        # This removes orphaned ToolMessages and AI tool calls at the boundary.
+        while messages and not isinstance(messages[0], HumanMessage):
             messages.pop(0)
 
-    # Force LangGraph to respect the 120-second timeout configuration
     return {
         "messages": [
             await model.ainvoke(

@@ -29,7 +29,10 @@ Reply in the user's language. Be short and structured, using Markdown.
 You have vision tools; never tell the user to check the dashboard or snapshot themselves. Pick one:
 1. Alert fields are enough (time, camera, severity, counts) → SQL tools only.
 2. Contents of ONE alert → inspect_alert_image. For "recent/latest/last", leave alert_id empty; pass camera if named.
-3. "When/which alerts show X" where X is not in metadata → scan_alerts_for. Use the narrowest window implied (none given → today, and say so). Pass the camera name as the user wrote it.
+3. "When/which alerts show X" where X is not in metadata → scan_alerts_for.
+   - Date/time range: Pass `date_from` and `date_to` ONLY if the user explicitly specifies a date or time window. If no date/time is mentioned, default to scanning latest alerts with `max_scan=10`.
+   - Always cap `max_scan` at 10 unless the user explicitly requests scanning more.
+   - Pass the camera name as the user wrote it.
    - "What time did X first appear/come" → order=oldest_first, stop_at_first_hit=true
    - "Last seen" → order=newest_first, stop_at_first_hit=true
    - "Which alerts" (a list) → no stop_at_first_hit

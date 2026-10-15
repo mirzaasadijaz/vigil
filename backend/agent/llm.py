@@ -21,6 +21,6 @@ def make_gemini(model: str, *, max_tokens: int, timeout: int) -> ChatGoogleGener
         google_api_key=settings.GEMINI_API_KEY or None,
         thinking_level="low",
         max_output_tokens=max_tokens,
-        max_retries=1,                      # each retry can cost a full timeout
+        max_retries=3,                      # each retry can cost a full timeout
         timeout=timeout,
     )

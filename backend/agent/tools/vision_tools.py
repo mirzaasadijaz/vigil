@@ -51,9 +51,10 @@ SCHEMAS = [
                     "alerts first, then a fast model screens each snapshot and a stronger model "
                     "confirms. Use for 'what time did the red dust bin appear on camera X', "
                     "'which alerts show a person wearing a helmet'. Pass the narrowest date range "
-                    "the user implies (none given -> today). For 'what time did X come/first "
-                    "appear' use order=oldest_first + stop_at_first_hit=true; for 'when was X "
-                    "last seen' use order=newest_first + stop_at_first_hit=true.",
+                    "the user implies (none given -> today). If no specific date/time is mentioned, "
+                    "scan the latest alerts up to max_scan (defaults to 10). "
+                    "For 'what time did X come/first appear' use order=oldest_first + stop_at_first_hit=true; "
+                    "for 'when was X last seen' use order=newest_first + stop_at_first_hit=true.",
      "input_schema": {"type": "object", "required": ["target"], "properties": {
          "target": {"type": "string", "description": "short English noun phrase, e.g. 'red dust bin'"},
          "camera": {"type": "string", "description": "camera name (e.g. 'OT-Ch 8') or numeric id"},
@@ -67,8 +68,7 @@ SCHEMAS = [
                              "description": "optional extra question answered for each match, "
                                             "e.g. 'how many people are next to it?'"},
          "max_scan": {"type": "integer",
-                      "description": f"snapshots to examine, default {getattr(settings, 'VISION_MAX_SCAN', 60)}, "
-                                     f"max {HARD_MAX_SCAN}"}}}},
+                      "description": f"snapshots to examine, default 10, max {HARD_MAX_SCAN}"}}}},
 ]
 
 _HAS_SNAPSHOT = (AlertLog.snapshot.is_not(None), AlertLog.snapshot != "")
@@ -228,7 +228,8 @@ async def scan_alerts_for(a: dict) -> dict:
         if err:
             return {"error": err}
 
-    cap = max(1, min(int(a.get("max_scan") or getattr(settings, "VISION_MAX_SCAN", 15)), HARD_MAX_SCAN))
+    # Default to a maximum of 10 scans to prevent free-tier rate limits, capping at HARD_MAX_SCAN.
+    cap = max(1, min(int(a.get("max_scan") or 10), HARD_MAX_SCAN))
     newest = a.get("order") != "oldest_first"
     first_only = bool(a.get("stop_at_first_hit"))
     rows, total = await _candidates(cam_id, a.get("module"), a.get("date_from"),
